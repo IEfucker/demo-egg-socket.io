@@ -1,5 +1,5 @@
 'use strict';
-
+const getRoom = require('../../extend/helper').getRoom;
 const PREFIX = 'room';
 
 module.exports = () => {
@@ -16,9 +16,19 @@ module.exports = () => {
 
     // 用户信息
     const {
-      room,
+      // room = getRoom(),
       userId,
     } = query;
+
+    let room = query.room;
+    // 默认为根据房间号加入房间
+    let isJoin = true;
+    // 没有房间号，为创建房间
+    if (!room) {
+      isJoin = false;
+      room = getRoom();
+    }
+
     const rooms = [ room ];
 
     logger.debug('#user_info', id, room, userId);
@@ -37,22 +47,28 @@ module.exports = () => {
 
     // 检查房间是否存在，不存在则踢出用户
     // 备注：此处 app.redis 与插件无关，可用其他存储代替
-    const hasRoom = await app.redis.get(`${PREFIX}:${room}`);
+    const roomKey = `${PREFIX}:${room}`;
+    const hasRoom = await app.redis.get(roomKey);
 
     logger.debug('#has_exist', hasRoom);
 
     if (!hasRoom) {
-      tick(id, {
-        type: 'deleted',
-        message: 'deleted, room has been deleted.',
-      });
-      return;
+      // 根据房间号加入
+      if (isJoin) {
+        tick(id, {
+          type: 'deleted',
+          message: 'deleted, room has been deleted.',
+        });
+        return;
+      }
+      // 创建房间
+      app.redis.set(roomKey, room);
     }
 
     // 用户加入
     logger.debug('#join', room);
     socket.join(room);
-    addUser(room, userId, id);
+    const isPlayer = addUser(room, userId, id);
 
     // 在线列表
     nsp.adapter.clients(rooms, (err, clients) => {
@@ -61,7 +77,9 @@ module.exports = () => {
       // 更新在线用户列表
       nsp.to(room).emit('online', {
         clients,
+        room,
         players: app.rooms[room].players,
+        isPlayer,
         socketId: id,
         userId,
         action: 'join',
@@ -90,7 +108,9 @@ module.exports = () => {
       // 更新在线用户列表
       nsp.to(room).emit('online', {
         clients,
+        room,
         players: app.rooms[room].players,
+        isPlayer,
         socketId: id,
         userId,
         action: 'leave',
@@ -99,7 +119,8 @@ module.exports = () => {
       });
     });
 
-    // add player if players are not full
+    // add user
+    // returns {Boolen} true if user is a player
     function addUser(room, userId, socketId) {
       app.rooms = app.rooms || {};
       app.rooms[room] = app.rooms[room] || {};
@@ -116,15 +137,16 @@ module.exports = () => {
         }
         return false;
       });
-      // 为掉线用户，已重连，return
-      if (index > -1) return;
-      // players已满（掉线用户只能原player重连填补位置） return
-      if (players.length === 2) return;
-      // 添加player
+      // 为掉线用户，已重连，return true
+      if (index > -1) return true;
+      // players已满（掉线用户只能原player重连填补位置） return false
+      if (players.length === 2) return false;
+      // 添加player, add player if players are not full
       players.push({
         userId,
         socketId,
       });
+      return true;
     }
 
     // remove player if user is a player
@@ -133,7 +155,7 @@ module.exports = () => {
       app.rooms[room] = app.rooms[room] || {};
       const currentRoom = app.rooms[room];
       currentRoom.players = currentRoom.players || [];
-      let players = currentRoom.players;
+      const players = currentRoom.players;
       // players = players.filter(p => {
       //   return p.userId !== userId;
       // });
@@ -143,11 +165,11 @@ module.exports = () => {
       // }
 
       // 标记player为offline
-      players = players.map(p => {
+      players.map(p => {
         if (p.userId === userId) p.isOffline = true;
         return p;
       });
-      console.log(players);
+      // console.log(isPlayer);
     }
 
   };

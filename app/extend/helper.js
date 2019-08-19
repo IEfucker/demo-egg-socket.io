@@ -14,4 +14,7 @@ module.exports = {
       },
     };
   },
+  getRoom() {
+    return new Date().getTime() + '';
+  },
 };

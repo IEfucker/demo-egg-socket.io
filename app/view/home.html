@@ -1,153 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Demo</title>
-    <style>
-      body {
-        overflow-x: hidden;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Demo</title>
+  <style>
+    body {
+      overflow-x: hidden;
+    }
+
+    .user-input-wrapper {
+      margin: auto;
+      padding: 12px;
+      width: 80%;
+    }
+
+    .console-wrapper {
+      margin: auto;
+      padding: 12px;
+      width: 80%;
+      background: #eee;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="user-input-wrapper">
+    <input type="text" id="user-input" />
+    <button id="send">发送</button>
+  </div>
+  <div class="console-wrapper">
+    <pre id="console"></pre>
+  </div>
+  <script src="https://cdn.bootcss.com/socket.io/2.1.0/socket.io.js"></script>
+  <!-- <script src="http://localhost:8080/weapp.socket.io.js"></script> -->
+  <script src="https://cdn.bootcss.com/lodash.js/4.17.10/lodash.min.js"></script>
+  <script>
+    for (
+      var v = 3, el = document.createElement('b'), all = el.all || [];
+      (el.innerHTML = '<!--[if gt IE ' + ++v + ']><i><![endif]-->'), all[0];
+
+    );
+
+    // 不重要的代码，仅展示使用 - start
+    const con = document.querySelector('#console')
+    const doc = document.documentElement
+    const wh = document.documentElement.clientHeight
+    const input = document.querySelector('#user-input')
+    const send = document.querySelector('#send')
+
+    const _scrollToBottom = (function () {
+      return _.throttle(function () {
+        doc.scrollTop = doc.scrollHeight
+      }, 100)
+    })()
+
+    const scrollToBottom = function () {
+      if (doc.scrollHeight > wh) {
+        _scrollToBottom()
       }
+    }
 
-      .user-input-wrapper {
-        margin: auto;
-        padding: 12px;
-        width: 80%;
-      }
-
-      .console-wrapper {
-        margin: auto;
-        padding: 12px;
-        width: 80%;
-        background: #eee;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="user-input-wrapper">
-      <input type="text" id="user-input" />
-      <button id="send">发送</button>
-    </div>
-    <div class="console-wrapper">
-      <pre id="console"></pre>
-    </div>
-    <script src="https://cdn.bootcss.com/socket.io/2.1.0/socket.io.js"></script>
-    <!-- <script src="http://localhost:8080/weapp.socket.io.js"></script> -->
-    <script src="https://cdn.bootcss.com/lodash.js/4.17.10/lodash.min.js"></script>
-    <script>
-      for (
-        var v = 3, el = document.createElement('b'), all = el.all || [];
-        (el.innerHTML = '<!--[if gt IE ' + ++v + ']><i><![endif]-->'), all[0];
-
-      );
-
-      // 不重要的代码，仅展示使用 - start
-      const con = document.querySelector('#console')
-      const doc = document.documentElement
-      const wh = document.documentElement.clientHeight
-      const input = document.querySelector('#user-input')
-      const send = document.querySelector('#send')
-
-      const _scrollToBottom = (function() {
-        return _.throttle(function() {
-          doc.scrollTop = doc.scrollHeight
-        }, 100)
-      })()
-
-      const scrollToBottom = function() {
-        if (doc.scrollHeight > wh) {
-          _scrollToBottom()
+    const log = function () {
+      let msgList = [].slice.apply(arguments)
+      msgList = msgList.map(function (msg) {
+        if (typeof msg !== 'object') {
+          return msg
         }
+        try {
+          return JSON.stringify(msg, null, 2)
+        } catch (error) {
+          return _.toString(msg)
+        }
+      })
+      con.innerText +=
+        new Date().toLocaleString() + ' ' + msgList.join('') + '\n'
+      scrollToBottom()
+      console.log.apply(null, arguments)
+    }
+
+    // ws = new WebSocket("ws://localhost:7001/");
+    // ws.onopen = function (event) {
+    //   console.log("Send Text WS was opened.");
+    // };
+    // ws.onmessage = function (event) {
+    //   console.log("response text msg: " + event.data);
+    // };
+    // ws.onerror = function (event) {
+    //   console.log("Send Text fired an error");
+    // };
+    // ws.onclose = function (event) {
+    //   console.log("WebSocket instance closed.");
+    // };
+
+    // 不重要的代码，仅展示使用 - end
+
+    window.onload = function () {
+      let hash = window.location.hash.replace("#", '')
+
+      let userId = sessionStorage.getItem('userId')
+      if (!userId) {
+        userId = `client_${Math.random()}`
+        sessionStorage.setItem('userId', userId)
       }
 
-      const log = function() {
-        let msgList = [].slice.apply(arguments)
-        msgList = msgList.map(function(msg) {
-          if (typeof msg !== 'object') {
-            return msg
-          }
-          try {
-            return JSON.stringify(msg, null, 2)
-          } catch (error) {
-            return _.toString(msg)
-          }
+      // init
+      const socket = io('/', {
+        // 实际使用中可以在这里传递参数
+        query: {
+          room: hash,
+          userId
+        },
+
+        transports: ['websocket']
+      })
+
+      console.log(socket)
+
+      socket.on('connect', () => {
+        const id = socket.id
+
+        log('#connect,', id, socket)
+
+        // 监听自身 id 以实现 p2p 通讯
+        socket.on(id, msg => {
+          log('#receive,', msg)
         })
-        con.innerText +=
-          new Date().toLocaleString() + ' ' + msgList.join('') + '\n'
-        scrollToBottom()
-        console.log.apply(null, arguments)
-      }
+      })
 
-      // ws = new WebSocket("ws://localhost:7001/");
-      // ws.onopen = function (event) {
-      //   console.log("Send Text WS was opened.");
-      // };
-      // ws.onmessage = function (event) {
-      //   console.log("response text msg: " + event.data);
-      // };
-      // ws.onerror = function (event) {
-      //   console.log("Send Text fired an error");
-      // };
-      // ws.onclose = function (event) {
-      //   console.log("WebSocket instance closed.");
-      // };
+      // 接收在线用户信息
+      socket.on('online', msg => {
+        log('#online,', msg)
+        let room = msg.room
+        window.location.hash = room
+      })
 
-      // 不重要的代码，仅展示使用 - end
+      // 系统事件
+      socket.on('disconnect', msg => {
+        log('#disconnect', msg)
+      })
 
-      window.onload = function() {
-        // init
-        const socket = io('/', {
-          // 实际使用中可以在这里传递参数
-          query: {
-            room: 'demo',
-            userId: `client_${Math.random()}`
-          },
+      socket.on('disconnecting', () => {
+        log('#disconnecting')
+      })
 
-          transports: ['websocket']
-        })
+      socket.on('error', () => {
+        log('#error')
+      })
 
-        console.log(socket)
+      socket.on('message', function (msgObj) {
+        log('#message', msgObj)
+      })
+      window.socket = socket
 
-        socket.on('connect', () => {
-          const id = socket.id
+      send.addEventListener('click', function () {
+        socket.send(input.value)
+      })
+    }
+  </script>
+</body>
 
-          log('#connect,', id, socket)
-
-          // 监听自身 id 以实现 p2p 通讯
-          socket.on(id, msg => {
-            log('#receive,', msg)
-          })
-        })
-
-        // 接收在线用户信息
-        socket.on('online', msg => {
-          log('#online,', msg)
-        })
-
-        // 系统事件
-        socket.on('disconnect', msg => {
-          log('#disconnect', msg)
-        })
-
-        socket.on('disconnecting', () => {
-          log('#disconnecting')
-        })
-
-        socket.on('error', () => {
-          log('#error')
-        })
-
-        socket.on('message', function(msgObj) {
-          log('#message', msgObj)
-        })
-        window.socket = socket
-
-        send.addEventListener('click', function() {
-          socket.send(input.value)
-        })
-      }
-    </script>
-  </body>
 </html>
