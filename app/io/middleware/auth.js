@@ -14,9 +14,10 @@ module.exports = () => {
     const nsp = app.io.of('/');
     const query = socket.handshake.query;
 
+    // console.log(socket.handshake);
+
     // 用户信息
     const {
-      // room = getRoom(),
       userId,
     } = query;
 
@@ -26,7 +27,7 @@ module.exports = () => {
     // 没有房间号，为创建房间
     if (!room) {
       isJoin = false;
-      room = getRoom();
+      query.room = room = getRoom();
     }
 
     const rooms = [ room ];
@@ -51,7 +52,6 @@ module.exports = () => {
     const hasRoom = await app.redis.get(roomKey);
 
     logger.debug('#has_exist', hasRoom);
-
     if (!hasRoom) {
       // 根据房间号加入
       if (isJoin) {

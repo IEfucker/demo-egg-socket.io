@@ -42,6 +42,8 @@ class NspController extends Controller {
     const {
       room,
     } = query;
+    console.log(socket.handshake);
+    console.log(room, payload);
 
     try {
       const msg = ctx.helper.parseMsg('message', payload, {
