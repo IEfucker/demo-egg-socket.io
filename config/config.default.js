@@ -48,5 +48,13 @@ module.exports = appInfo => {
     },
   };
 
+  config.const = {
+    HALL: 'HALL',
+    ROOMINVITE: 'room:invite',
+    ROOMCREATE: 'room:create',
+    ROOMJOIN: 'room:join',
+    ROOMTICK: 'room:tick',
+  };
+
   return config;
 };

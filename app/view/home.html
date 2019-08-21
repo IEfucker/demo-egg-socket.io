@@ -1,156 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Demo</title>
-    <style>
-      body {
-        overflow-x: hidden;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Demo</title>
+  <style>
+    body {
+      overflow-x: hidden;
+    }
+
+    .user-input-wrapper {
+      margin: auto;
+      padding: 12px;
+      width: 80%;
+    }
+
+    .console-wrapper {
+      margin: auto;
+      padding: 12px;
+      width: 80%;
+      background: #eee;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="user-input-wrapper">
+    <button id="createRoom">创建房间</button>
+    <button id="inviteUser">邀请进入房间</button>
+    <button id="joinRoom">邀请进入房间</button>
+    <br />
+    <input type="text" id="user-input" />
+    <button id="send">发送</button>
+  </div>
+  <div class="console-wrapper">
+    <pre id="console"></pre>
+  </div>
+  <script src="https://cdn.bootcss.com/socket.io/2.1.0/socket.io.js"></script>
+  <!-- <script src="http://localhost:8080/weapp.socket.io.js"></script> -->
+  <script src="https://cdn.bootcss.com/lodash.js/4.17.10/lodash.min.js"></script>
+  <script>
+    for (
+      var v = 3, el = document.createElement('b'), all = el.all || [];
+      (el.innerHTML = '<!--[if gt IE ' + ++v + ']><i><![endif]-->'), all[0];
+
+    );
+
+    // 不重要的代码，仅展示使用 - start
+    const con = document.querySelector('#console')
+    const doc = document.documentElement
+    const wh = document.documentElement.clientHeight
+    const input = document.querySelector('#user-input')
+    const send = document.querySelector('#send')
+    const createRoom = document.querySelector('#createRoom')
+    const inviteUser = document.querySelector('#inviteUser')
+    const joinRoom = document.querySelector('#joinRoom')
+
+    const _scrollToBottom = (function () {
+      return _.throttle(function () {
+        doc.scrollTop = doc.scrollHeight
+      }, 100)
+    })()
+
+    const scrollToBottom = function () {
+      if (doc.scrollHeight > wh) {
+        _scrollToBottom()
       }
+    }
 
-      .user-input-wrapper {
-        margin: auto;
-        padding: 12px;
-        width: 80%;
-      }
-
-      .console-wrapper {
-        margin: auto;
-        padding: 12px;
-        width: 80%;
-        background: #eee;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="user-input-wrapper">
-      <input type="text" id="user-input" />
-      <button id="send">发送</button>
-    </div>
-    <div class="console-wrapper">
-      <pre id="console"></pre>
-    </div>
-    <script src="https://cdn.bootcss.com/socket.io/2.1.0/socket.io.js"></script>
-    <!-- <script src="http://localhost:8080/weapp.socket.io.js"></script> -->
-    <script src="https://cdn.bootcss.com/lodash.js/4.17.10/lodash.min.js"></script>
-    <script>
-      for (
-        var v = 3, el = document.createElement('b'), all = el.all || [];
-        (el.innerHTML = '<!--[if gt IE ' + ++v + ']><i><![endif]-->'), all[0];
-
-      );
-
-      // 不重要的代码，仅展示使用 - start
-      const con = document.querySelector('#console')
-      const doc = document.documentElement
-      const wh = document.documentElement.clientHeight
-      const input = document.querySelector('#user-input')
-      const send = document.querySelector('#send')
-
-      const _scrollToBottom = (function() {
-        return _.throttle(function() {
-          doc.scrollTop = doc.scrollHeight
-        }, 100)
-      })()
-
-      const scrollToBottom = function() {
-        if (doc.scrollHeight > wh) {
-          _scrollToBottom()
+    const log = function () {
+      let msgList = [].slice.apply(arguments)
+      msgList = msgList.map(function (msg) {
+        if (typeof msg !== 'object') {
+          return msg
         }
-      }
-
-      const log = function() {
-        let msgList = [].slice.apply(arguments)
-        msgList = msgList.map(function(msg) {
-          if (typeof msg !== 'object') {
-            return msg
-          }
-          try {
-            return JSON.stringify(msg, null, 2)
-          } catch (error) {
-            return _.toString(msg)
-          }
-        })
-        con.innerText +=
-          new Date().toLocaleString() + ' ' + msgList.join('') + '\n'
-        scrollToBottom()
-        console.log.apply(null, arguments)
-      }
-
-      const getRoom = function() {
-        let hash = window.location.hash.replace('#', '')
-        // 可能为空字符串
-        return hash
-      }
-
-      const getUserId = function() {
-        let userId = sessionStorage.getItem('userId')
-        if (!userId) {
-          userId = `client_${Math.random()}`
-          sessionStorage.setItem('userId', userId)
+        try {
+          return JSON.stringify(msg, null, 2)
+        } catch (error) {
+          return _.toString(msg)
         }
-        return userId
+      })
+      con.innerText +=
+        new Date().toLocaleString() + ' ' + msgList.join('') + '\n'
+      scrollToBottom()
+      console.log.apply(null, arguments)
+    }
+
+    const getRoom = function () {
+      let hash = window.location.hash.replace('#', '')
+      // 可能为空字符串
+      return hash
+    }
+
+    const getUserId = function () {
+      let userId = sessionStorage.getItem('userId')
+      if (!userId) {
+        userId = `client_${Math.random()}`
+        sessionStorage.setItem('userId', userId)
       }
+      return userId
+    }
 
-      window.onload = function() {
-        const room = getRoom()
-        const userId = getUserId()
+    window.onload = function () {
+      const room = getRoom()
+      const userId = getUserId()
 
-        let query = {}
-        if (room) query.room = room
-        if (userId) query.userId = userId
-        // init
-        const socket = io('/', {
-          // 实际使用中可以在这里传递参数
-          query,
-          transports: ['websocket']
+      let query = {}
+      if (room) query.room = room
+      if (userId) query.userId = userId
+      // init
+      const socket = io('/', {
+        // 实际使用中可以在这里传递参数
+        query: {
+          room: 'hall',
+          userId
+        },
+        transports: ['websocket']
+      })
+
+      socket.on('connect', () => {
+        const id = socket.id
+
+        log('#connect,', id, socket)
+
+        // 监听自身 id 以实现 p2p 通讯
+        socket.on(id, msg => {
+          log('#receive,', msg)
         })
+      })
 
-        console.log(socket)
+      // 接收在线用户信息
+      socket.on('online', msg => {
+        log('#online,', msg)
+        let room = msg.room
+        window.location.hash = room
+      })
 
-        socket.on('connect', () => {
-          const id = socket.id
+      // 系统事件
+      socket.on('disconnect', msg => {
+        log('#disconnect', msg)
+      })
 
-          log('#connect,', id, socket)
+      socket.on('disconnecting', () => {
+        log('#disconnecting')
+      })
 
-          // 监听自身 id 以实现 p2p 通讯
-          socket.on(id, msg => {
-            log('#receive,', msg)
-          })
+      socket.on('error', () => {
+        log('#error')
+      })
+
+      socket.on('message', function (msgObj) {
+        log('#message', msgObj)
+      })
+      window.socket = socket
+
+      send.addEventListener('click', function () {
+        socket.send(input.value)
+      })
+
+      createRoom.addEventListener('click', function () {
+        // 是否为决斗房间
+        const isDuel = false
+        // 从页面获取密码
+        const pass = null
+        const msg = {
+          isDuel,
+          pass
+        }
+        socket.emit('room:create', msg)
+      })
+
+      inviteUser.addEventListener('click', function () {
+        const roomId = 'demo',
+          inviter = 'user0',
+          invitee = 'user1'
+        socket.emit('room:invite', {
+          roomId,
+          inviter,
+          invitee
         })
+      })
+    }
+  </script>
+</body>
 
-        // 接收在线用户信息
-        socket.on('online', msg => {
-          log('#online,', msg)
-          let room = msg.room
-          window.location.hash = room
-        })
-
-        // 系统事件
-        socket.on('disconnect', msg => {
-          log('#disconnect', msg)
-        })
-
-        socket.on('disconnecting', () => {
-          log('#disconnecting')
-        })
-
-        socket.on('error', () => {
-          log('#error')
-        })
-
-        socket.on('message', function(msgObj) {
-          log('#message', msgObj)
-        })
-        window.socket = socket
-
-        send.addEventListener('click', function() {
-          socket.send(input.value)
-        })
-      }
-    </script>
-  </body>
 </html>

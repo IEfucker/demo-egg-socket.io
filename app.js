@@ -2,9 +2,10 @@
 
 module.exports = app => {
   app.beforeStart(async () => {
-    const room = await app.redis.get('room:demo');
-    if (!room) {
-      await app.redis.set('room:demo', 'demo');
+    const hallName = app.config.const.HALL;
+    const hall = await app.redis.get(hallName);
+    if (!hall) {
+      await app.redis.set(hallName, 'hall');
     }
   });
 };
