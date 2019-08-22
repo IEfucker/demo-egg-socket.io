@@ -23,6 +23,7 @@ class NspController extends Controller {
         client,
         target,
       });
+      console.log(msg);
       nsp.emit(target, msg);
     } catch (error) {
       app.logger.error(error);
@@ -38,20 +39,20 @@ class NspController extends Controller {
     const payload = ctx.args[0] || {};
     const socket = ctx.socket;
     const client = socket.id;
-    const query = socket.handshake.query;
+    // const query = socket.handshake.query;
     const {
-      room,
-    } = query;
-    console.log(socket.handshake);
-    console.log(room, payload);
+      roomId,
+      message,
+    } = payload;
 
     try {
-      const msg = ctx.helper.parseMsg('message', payload, {
+      const msg = ctx.helper.parseMsg('message', message, {
         client,
         // target,
       });
+      console.log(msg);
       // socket.emit('message', msg);
-      nsp.to(room).emit('message', msg);
+      nsp.to(roomId).emit('message', msg);
     } catch (error) {
       app.logger.error(error);
     }
@@ -67,8 +68,21 @@ class NspController extends Controller {
     const nsp = app.io.of('/');
     const payload = ctx.args[0] || {};
     const socket = ctx.socket;
-    const client = socket.id;
+    const socketId = socket.id;
     const query = socket.handshake.query;
+    console.log(query);
+    const {
+      userId,
+    } = query;
+    const user = {
+      userId,
+      socketId,
+      isPlayer: true,
+      // 默认执黑
+      currentRole: 1,
+      isOffline: false,
+      isReady: true,
+    };
 
     const {
       ROOMCREATE,
@@ -90,7 +104,25 @@ class NspController extends Controller {
       }
       // 加入room频道
       socket.join(roomId);
-      query.room = roomId;
+
+      const {
+        rooms = [],
+      } = app;
+      const room = {
+        roomId,
+        isDuel,
+        roomOwner: userId,
+        users: [ user ],
+        players: [ userId ],
+        audiences: null,
+        gameId: ctx.helper.allocGameId(),
+        gameStarted: false,
+        boardMap: ctx.helper.getBoardMap(),
+        turn: 1,
+        winner: null,
+        winnerArray: null,
+      };
+      rooms.push(room);
 
       // room在线列表
       nsp.adapter.clients([ roomId ], (err, clients) => {
@@ -98,10 +130,13 @@ class NspController extends Controller {
 
         // 更新在线用户列表
         nsp.to(roomId).emit('online', {
-          clients,
           action: ROOMCREATE,
+          payload: {
+            room,
+            user,
+          },
           target: 'participator',
-          message: `Client(${client}) joined.`,
+          message: `Client(${socketId}) joined.`,
         });
       });
 
@@ -111,38 +146,82 @@ class NspController extends Controller {
     }
   }
 
-  async roomInvite() {
+  async roomJoin() {
     const {
       ctx,
       app,
-      config,
     } = this;
-    // const nsp = app.io.of('/');
+    const nsp = app.io.of('/');
     const payload = ctx.args[0] || {};
-    const socket = ctx.socket;
-    // const client = socket.id;
+    const {
+      socket,
+    } = ctx;
+    const client = socket.id;
     // const query = socket.handshake.query;
     const {
-      ROOMINVITE,
-    } = config.const;
+      roomId,
+    } = payload;
 
-    console.log('invite', payload);
 
     try {
-      const {
-        roomId,
-        inviter,
-        invitee,
-      } = payload;
-      socket.emit(invitee, {
-        action: ROOMINVITE,
-        roomId,
-        inviter,
+      socket.join(roomId);
+      // query.room = roomId;
+
+      nsp.adapter.clients([ roomId ], (err, clients) => {
+        app.logger.debug('#online_join', clients);
+
+        // 更新在线用户列表
+        nsp.to(roomId).emit('online', {
+          clients,
+          action: 'join',
+          roomId,
+          target: 'participator',
+          message: `Client(${client}) joined.`,
+        });
       });
     } catch (error) {
       app.logger.error(error);
     }
   }
+
+  async roomTick() {
+    const {
+      ctx,
+      app,
+    } = this;
+    const nsp = app.io.of('/');
+    const payload = ctx.args[0] || {};
+    const {
+      socket,
+    } = ctx;
+    const client = socket.id;
+    // const query = socket.handshake.query;
+    const {
+      roomId,
+    } = payload;
+
+
+    try {
+      socket.join(roomId);
+      // query.room = roomId;
+
+      nsp.adapter.clients([ roomId ], (err, clients) => {
+        app.logger.debug('#online_join', clients);
+
+        // 更新在线用户列表
+        nsp.to(roomId).emit('online', {
+          clients,
+          action: 'join',
+          roomId,
+          target: 'participator',
+          message: `Client(${client}) joined.`,
+        });
+      });
+    } catch (error) {
+      app.logger.error(error);
+    }
+  }
+
 }
 
 module.exports = NspController;
