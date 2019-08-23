@@ -8,7 +8,7 @@ module.exports = () => {
       logger,
     } = ctx;
     const id = socket.id;
-    // const nsp = app.io.of('/');
+    const nsp = app.io.of('/');
     const query = socket.handshake.query;
     const hall = app.config.const.HALL;
     console.log(query);
@@ -21,7 +21,7 @@ module.exports = () => {
     console.log('join into hall', id, userId);
     const user = {
       userId,
-      socketid: id,
+      socketId: id,
     };
 
     // 进入大厅
@@ -35,21 +35,23 @@ module.exports = () => {
       users = [],
     } = app;
     users.push(user);
+    app.users = users;
 
-    // // 在线列表
-    // nsp.adapter.clients([ hall ], (err, clients) => {
-    //   logger.debug('#online_join', clients);
+    // 在线列表
+    nsp.adapter.clients([ hall ], (err, clients) => {
+      logger.debug('#online_join', clients);
 
-    //   // 更新在线用户列表
-    //   nsp.to(hall).emit('online', {
-    //     clients,
-    //     action: 'join',
-    //     target: 'participator',
-    //     message: `Client(${id}) joined.`,
-    //   });
-    // });
+      // 更新在线用户列表
+      nsp.to(hall).emit('online', {
+        user,
+        action: 'online',
+        target: 'participator',
+        message: `Client(${id}) joined.`,
+      });
+    });
 
     await next();
+    // 全局中剔除user
     users.some((item, i, users) => {
       if (item.userId === user.userId) {
         users.splice(i, 1);
@@ -58,6 +60,7 @@ module.exports = () => {
       }
       return false;
     });
+    app.users = users;
 
     // 用户离开
     logger.debug('#leave', hall);
@@ -65,25 +68,25 @@ module.exports = () => {
     socket.leave(hall);
 
     // 在线列表
-    // nsp.adapter.clients([ hall ], (err, clients) => {
-    //   logger.debug('#online_leave', clients);
+    nsp.adapter.clients([ hall ], (err, clients) => {
+      logger.debug('#online_leave', clients);
 
-    //   // 获取 client 信息
-    //   // const clientsDetail = {};
-    //   // clients.forEach(client => {
-    //   //   const _client = app.io.sockets.sockets[client];
-    //   //   const _query = _client.handshake.query;
-    //   //   clientsDetail[client] = _query;
-    //   // });
+      // 获取 client 信息
+      // const clientsDetail = {};
+      // clients.forEach(client => {
+      //   const _client = app.io.sockets.sockets[client];
+      //   const _query = _client.handshake.query;
+      //   clientsDetail[client] = _query;
+      // });
 
-    //   // 更新在线用户列表
-    //   nsp.to(hall).emit('online', {
-    //     clients,
-    //     action: 'leave',
-    //     target: 'participator',
-    //     message: `Client(${id}) leaved.`,
-    //   });
-    // });
+      // 更新在线用户列表
+      nsp.to(hall).emit('online', {
+        user,
+        action: 'offline',
+        target: 'participator',
+        message: `Client(${id}) leaved.`,
+      });
+    });
 
   };
 };
