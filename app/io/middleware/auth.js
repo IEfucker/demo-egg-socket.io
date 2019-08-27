@@ -11,18 +11,17 @@ module.exports = () => {
     const nsp = app.io.of('/');
     const query = socket.handshake.query;
     const hall = app.config.const.HALL;
-    console.log(query);
     // 用户信息
     const {
       userId,
     } = query;
 
     logger.debug('#user_info', id, userId);
-    console.log('join into hall', id, userId);
     const user = {
       userId,
       socketId: id,
     };
+    // console.log('join into hall', user);
 
     // 进入大厅
     socket.join(hall, () => {
@@ -41,6 +40,7 @@ module.exports = () => {
     nsp.adapter.clients([ hall ], (err, clients) => {
       logger.debug('#online_join', clients);
 
+      // !!上线消息应该发给指定用户，如好友，而非所有
       // 更新在线用户列表
       nsp.to(hall).emit('online', {
         user,
@@ -55,7 +55,7 @@ module.exports = () => {
     users.some((item, i, users) => {
       if (item.userId === user.userId) {
         users.splice(i, 1);
-        console.log(users);
+        console.log(user, users);
         return true;
       }
       return false;

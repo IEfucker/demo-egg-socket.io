@@ -34,8 +34,9 @@
 <body>
   <div class="user-input-wrapper">
     <button id="createRoom">创建房间</button>
-    <button id="inviteUser">邀请进入房间</button>
+    <button id="leaveRoom">离开房间</button>
     <button id="joinRoom">进入房间</button>
+    <button id="inviteUser">邀请进入房间</button>
     <br />
     <input type="text" id="user-input" />
     <button id="send">发送</button>
@@ -60,6 +61,7 @@
     const input = document.querySelector('#user-input')
     const send = document.querySelector('#send')
     const createRoom = document.querySelector('#createRoom')
+    const leaveRoom = document.querySelector('#leaveRoom')
     const inviteUser = document.querySelector('#inviteUser')
     const joinRoom = document.querySelector('#joinRoom')
 
@@ -123,18 +125,44 @@
 
       socket.on('connect', () => {
         const id = socket.id
+        const userId = socket.query.userId
+        const user = {
+          userId,
+          socketId: id
+        }
 
-        log('#connect,', id, socket)
+        log('#connect,', user)
 
         // 监听自身 id 以实现 p2p 通讯
         socket.on(id, msg => {
           log('#receive,', msg)
+          const {
+            payload
+          } = msg.data
+          if (payload.action === 'invite') {
+            const {
+              inviter,
+              roomId
+            } = payload
+            console.log('why!!!!')
+            let result = confirm(`${inviter} invite you to join room ${roomId}`)
+            if (result) {
+              const msg = {
+                roomId,
+                userId,
+                // 标记是否是受邀加入房间
+                byInvite: true
+              }
+              socket.emit('room:join', msg)
+            }
+          }
         })
       })
 
       // 接收在线用户信息
       socket.on('online', msg => {
         log('#online,', msg)
+        // 邀请测试
         window.user1 = window.user1 || msg.user
         window.user2 = msg.user
       })
@@ -155,8 +183,6 @@
         const roomId = room.roomId
         console.log(roomId)
         window.roomId = roomId
-        // if (room.users.length > 1)
-        //   window.user2 = msg.payload.user
       })
 
       socket.on('error', () => {
@@ -191,12 +217,20 @@
         socket.emit('room:create', msg)
       })
 
+      leaveRoom.addEventListener('click', function () {
+        const msg = {
+          roomId: window.roomId,
+        }
+        socket.emit('room:leave', msg)
+      })
+
       inviteUser.addEventListener('click', function () {
         if (!window.user2) alert('未找到邀请对象')
         const roomId = window.roomId,
           inviter = window.user1.socketId,
           invitee = window.user2.socketId
 
+        if (!roomId) throw new Error('roomId missing')
         socket.emit('exchange', {
           target: invitee,
           payload: {

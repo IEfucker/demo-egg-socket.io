@@ -52,6 +52,7 @@ module.exports = appInfo => {
     HALL: 'HALL',
     ROOMINVITE: 'room:invite',
     ROOMCREATE: 'room:create',
+    ROOMLEAVE: 'room:leave',
     ROOMJOIN: 'room:join',
     ROOMTICK: 'room:tick',
   };

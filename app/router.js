@@ -14,6 +14,7 @@ module.exports = app => {
 
   const {
     ROOMCREATE,
+    ROOMLEAVE,
     ROOMJOIN,
   } = config.const;
 
@@ -22,5 +23,6 @@ module.exports = app => {
   io.of('/').route('exchange', io.controller.nsp.exchange);
   io.of('/').route('message', io.controller.nsp.message);
   io.of('/').route(ROOMCREATE, io.controller.nsp.roomCreate);
+  io.of('/').route(ROOMLEAVE, io.controller.nsp.roomLeave);
   io.of('/').route(ROOMJOIN, io.controller.nsp.roomJoin);
 };
