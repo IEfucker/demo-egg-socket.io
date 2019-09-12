@@ -57,5 +57,11 @@ module.exports = appInfo => {
     ROOMTICK: 'room:tick',
   };
 
+  config.cors = {
+    credentials: true,
+    origin: ctx => ctx.get('origin'),
+    allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS',
+  };
+
   return config;
 };

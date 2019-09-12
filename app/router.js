@@ -11,6 +11,8 @@ module.exports = app => {
     config,
   } = app;
   router.get('/', controller.home.index);
+  router.get('/api/v1/user', controller.api.user.getUser);
+  router.get('/api/v1/users', controller.api.user.getUsers);
 
   const {
     ROOMCREATE,

@@ -17,3 +17,14 @@ exports.redis = {
   enable: true,
   package: 'egg-redis',
 };
+
+exports.cors = {
+  enable: true,
+  package: 'egg-cors',
+};
+
+// exports.security = {
+//   // domainWhiteList: [ 'http://localhost:3000' ],
+//   enable: false,
+//   package: 'egg-security',
+// };
