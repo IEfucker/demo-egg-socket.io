@@ -59,7 +59,6 @@ module.exports = {
     });
   },
 
-
   /**
    * 获取（创建）room信息
    * @param {String} roomId
@@ -67,7 +66,7 @@ module.exports = {
    * room属性如下
    * roomId
    * isDuel ---- 是否为对决房
-   * roomOwner ---- userId
+   * owner ---- userId
    * users ----- user组成数组，属性同下current user
    * players ---- userId组成数组
    * audiences ----- userId组成数组
@@ -86,7 +85,8 @@ module.exports = {
     const room = {
       roomId,
       isDuel,
-      roomOwner: userId,
+      owner: userId,
+      NO: roomId.replace('room:', ''),
       users,
     };
     return room;

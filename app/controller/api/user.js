@@ -4,7 +4,12 @@ const Controller = require('egg').Controller;
 
 class UserController extends Controller {
   async getUser(ctx) {
-    const user = await ctx.service.user.getUserAtRandom();
+    const {
+      userId,
+    } = ctx.session;
+    const service = userId ? 'getUserById' : 'getUserRandomly';
+    const user = await ctx.service.user[service](userId);
+    ctx.session.userId = user.id;
     ctx.body = user;
     ctx.status = 200;
   }

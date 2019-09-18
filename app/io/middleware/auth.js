@@ -17,24 +17,25 @@ module.exports = () => {
     } = query;
 
     logger.debug('#user_info', id, userId);
-    const user = {
-      userId,
-      socketId: id,
-    };
+    // const user = {
+    //   userId,
+    //   socketId: id,
+    // };
+    let user = app.mockUsers.filter(u => {
+      if (u.id === userId) {
+        u.socketId = id;
+        u.isOnline = true;
+        return true;
+      }
+      return false;
+    })[0];
     // console.log('join into hall', user);
 
     // 进入大厅
     socket.join(hall, () => {
-      // const rooms = Object.keys(socket.rooms);
-      // console.log(rooms); // [ <socket.id>, 'HALL' ]
+      user.isOnline = true;
     });
 
-    // user注册到app上
-    const {
-      users = [],
-    } = app;
-    users.push(user);
-    app.users = users;
 
     // 在线列表
     nsp.adapter.clients([ hall ], (err, clients) => {
@@ -44,25 +45,32 @@ module.exports = () => {
       // 更新在线用户列表
       nsp.to(hall).emit('online', {
         user,
+        rooms: app.rooms,
         action: 'online',
         target: 'participator',
         message: `Client(${id}) joined.`,
       });
     });
 
+    // 如果是刷新重连，
+    // 重新加入room频道
+    if (user.inRoom) {
+      socket.join(user.inRoom);
+    }
+    console.log(socket.id);
+
     await next();
-    // 全局中剔除user
-    users.some((item, i, users) => {
-      if (item.userId === user.userId) {
-        users.splice(i, 1);
-        console.log(user, users);
+
+    // 用户离开
+    // 更新mockUsers状态
+    user = app.mockUsers.filter(u => {
+      if (u.id === userId) {
+        u.socketId = null;
+        u.isOnline = false;
         return true;
       }
       return false;
-    });
-    app.users = users;
-
-    // 用户离开
+    })[0];
     logger.debug('#leave', hall);
     console.log('leave hall', id, userId);
     socket.leave(hall);

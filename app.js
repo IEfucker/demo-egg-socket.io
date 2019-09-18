@@ -77,6 +77,7 @@ module.exports = app => {
       await app.redis.set(hallName, 'hall');
     }
 
+    // 创建全部用户（好友）
     app.mockUsers = app.mockUsers || mockUsers;
   });
 };

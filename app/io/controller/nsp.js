@@ -41,12 +41,12 @@ class NspController extends Controller {
     // const query = socket.handshake.query;
     const {
       roomId,
-      message,
     } = payload;
-    // console.log(payload);
+    console.log(payload);
     if (roomId === undefined) return;
     try {
-      const msg = ctx.helper.parseMsg('message', message, {
+      payload.isSending = false;
+      const msg = ctx.helper.parseMsg('message', payload, {
         client,
         // target,
       });
@@ -64,6 +64,7 @@ class NspController extends Controller {
       config,
       logger,
     } = this;
+    const hall = app.config.const.HALL;
     const nsp = app.io.of('/');
     const payload = ctx.args[0] || {};
     const socket = ctx.socket;
@@ -73,10 +74,10 @@ class NspController extends Controller {
       userId,
     } = query;
     // user引用型，指向users中user
-    const user = app.users.filter(item => {
-      return item.userId === userId;
+    const user = app.mockUsers.filter(item => {
+      return item.id === userId;
     })[0];
-
+    // console.log(user);
     const {
       ROOMCREATE,
     } = config.const;
@@ -113,10 +114,11 @@ class NspController extends Controller {
       // 更新app.users用户状态
       user.inRoom = roomId;
       user.isPlayer = true;
+      user.socketId = socketId;
       user.currentRole = 1;
       user.isOffline = false;
       user.isReady = false;
-      console.log(app.users);
+      // console.log(app.mockUsers);
 
       const {
         rooms = [],
@@ -124,7 +126,8 @@ class NspController extends Controller {
       const room = {
         roomId,
         isDuel,
-        roomOwner: userId,
+        owner: userId,
+        NO: roomId.replace('room:', ''),
         users: [ user ],
         players: [ userId ],
         audiences: [],
@@ -137,14 +140,14 @@ class NspController extends Controller {
       };
       rooms.push(room);
       app.rooms = rooms;
-      console.log(app.rooms);
+      // console.log(app.rooms);
 
       // room在线列表
       nsp.adapter.clients([ roomId ], (err, clients) => {
         logger.debug('#online_join', clients);
 
-        // 更新在线用户列表
-        nsp.to(roomId).emit('join', {
+        // 向大厅发送创建房间成功消息
+        nsp.to(hall).emit('room:created', {
           action: ROOMCREATE,
           payload: {
             room,
@@ -178,7 +181,7 @@ class NspController extends Controller {
     const {
       rooms = [],
     } = app;
-    console.log(payload);
+    // console.log(payload);
     try {
       const action = 'room:join:failed';
       if (!roomId) {
@@ -186,7 +189,7 @@ class NspController extends Controller {
           socketId,
           // target,
         });
-        console.log(socketId, msg);
+        // console.log(socketId, msg);
         return socket.emit(socketId, msg);
         // return socket.to(socketId).emit('message', msg);
       }
@@ -208,36 +211,46 @@ class NspController extends Controller {
         });
         return socket.emit(socketId, msg);
       }
-
       nsp.adapter.clients([ roomId ], (err, clients) => {
         // console.log(clients, socketId);
         app.logger.debug('#online_join', clients);
         // 验证是否已在此房间
         if (clients.length && clients.includes(socketId)) {
-          const msg = ctx.helper.parseMsg('message', 'User has been in this room', {
-            socketId,
-            // target,
-          });
+          const msg = ctx.helper.parseMsg(
+            'message',
+            'User has been in this room', {
+              socketId,
+              // target,
+            }
+          );
           // socket.to(socketId).emit('message', msg);
           socket.emit('message', msg);
           return;
         }
+
         socket.join(roomId);
         const room = rooms.filter(item => {
           return item.roomId === roomId;
         })[0];
-
+        // console.log(room);
         // 构建user信息，更新room信息
         const {
           players,
           users,
           audiences,
         } = room;
-        const user = {
-          userId,
-          socketId,
-        };
-        // console.log(players);
+        // const user = {
+        //   userId,
+        //   socketId,
+        // };
+        const user = app.mockUsers.filter(u => {
+          if (u.id === userId) {
+            u.inRoom = room.roomId;
+            return true;
+          }
+          return false;
+        })[0];
+        // console.log(user);
         if (players.length >= 2) {
           // audience
           user.isPlayer = false;
@@ -288,8 +301,8 @@ class NspController extends Controller {
       roomId,
     } = payload;
     // user引用型，指向users中user
-    const user = app.users.filter(item => {
-      return item.userId === userId;
+    const user = app.mockUsers.filter(item => {
+      return item.id === userId;
     })[0];
 
     const {
@@ -311,14 +324,6 @@ class NspController extends Controller {
         });
         return socket.emit(socketId, msg);
       }
-      // 更新app.users用户状态
-      user.inRoom = null;
-      delete user.isPlayer;
-      delete user.currentRole;
-      delete user.isOffline;
-      delete user.isReady;
-      // console.log(app.users);
-
 
       // 更新rooms
       const {
@@ -339,24 +344,42 @@ class NspController extends Controller {
         app.redis.del(roomId);
         rooms.splice(roomIndex, 1);
         room = null;
+      } else {
+        // 更新起来真麻烦
+        // 不管了
+        // room.users
+        // room.players
+        // room.audiences
+
       }
       app.rooms = rooms;
       // console.log(app.rooms);
 
+      // 更新app.users用户状态
+      user.inRoom = null;
+      delete user.isPlayer;
+      delete user.currentRole;
+      delete user.isOffline;
+      delete user.isReady;
+
       // room在线列表
       nsp.adapter.clients([ roomId ], (err, clients) => {
         logger.debug('#online_leave', clients);
-        const message = room ? `Client(${socketId}) leaved.` : `Room ${roomId} has been destroyed`;
+        const message = room ?
+          `Client(${socketId}) leaved.` :
+          `Room ${roomId} has been destroyed`;
         const action = room ? ROOMLEAVE : 'room:destroyed';
         const payload = {
           action,
           payload: {
+            roomId,
             room,
             user,
           },
           target: 'participator',
           message,
         };
+        console.log(room, socketId);
         // 更新在线用户列表
         if (room) {
           nsp.to(roomId).emit('leave', payload);
@@ -364,7 +387,6 @@ class NspController extends Controller {
         // 给该用户单独发送消息
         socket.emit(socketId, payload);
       });
-
     } catch (error) {
       app.logger.error(error);
     }

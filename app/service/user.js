@@ -4,7 +4,16 @@ const Service = require('egg').Service;
 
 
 class UserService extends Service {
-  getUserAtRandom() {
+  getUserById(userId) {
+    const {
+      app,
+    } = this.ctx;
+    const user = app.mockUsers.filter(u => (u.id === userId))[0];
+    // 该用户标记为登陆
+    // this.signInUserById(user.id);
+    return user;
+  }
+  getUserRandomly() {
     const {
       app,
     } = this.ctx;
@@ -14,9 +23,10 @@ class UserService extends Service {
     const randIndex = Math.floor(Math.random() * len);
     const user = validUsers[randIndex];
     // 该用户标记为登陆
-    this.signInUserById(user.id);
+    // this.signInUserById(user.id);
     return user;
   }
+  // socket连接后，isOnline再更新为true
   signInUserById(id) {
     const {
       app,
